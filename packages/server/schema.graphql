@@ -6,8 +6,8 @@ type PageInfo {
 type Pokemon {
   id: ID!
   name: String
-  types: [String]
   classification: String
+  types: [String]
 }
 
 type PokemonEdge {

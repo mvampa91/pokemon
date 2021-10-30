@@ -1,5 +1,3 @@
-import { ApolloError } from "@apollo/client";
-
 export interface Pokemon {
     id: string;
     name: string;

@@ -9,8 +9,8 @@ import { Connection } from "../types";
 interface Pokemon {
   id: string;
   name: string;
-  types: string[];
   classification: string;
+  types: string[];
 }
 
 const SIZE = 10;

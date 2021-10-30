@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { ChangeEvent, MouseEvent, useEffect, useState } from "react";
+import { Table, Tag, Input, Button } from "antd";
 import { useQuery } from "@apollo/client";
-import { Edge, Pokemon } from "./types";
-import { GET_POKEMONS } from "./queries";
 import "antd/dist/antd.css";
-import { Table, Tag, Input } from "antd";
+
+import { Edge, Pokemon } from "../ducks/types";
+import getTypeColor from "../ducks/colors";
+import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../ducks/queries";
 
 const { Search } = Input;
 
@@ -20,7 +22,9 @@ const columns = [
     render: (text: string[]) => (
       <>
         {text.map((t, index) => (
-          <Tag key={index}>{t}</Tag>
+          <Tag key={index} color={getTypeColor(t)}>
+            {t}
+          </Tag>
         ))}
       </>
     ),
@@ -31,36 +35,65 @@ const columns = [
     key: "classification",
   },
 ];
-export const Pokemons: React.FC<{}> = () => {
-  const [name, setName] = useState("");
-  const { loading, error, data } = useQuery(GET_POKEMONS, {
-    variables: { name },
-  });
 
-  const onSearch = (value: string) => {
-    setName(value);
+export const Pokemons: React.FC<{}> = () => {
+  const [query, setQuery] = useState<String>();
+  const [cursor, setCursor] = useState<String>();
+  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+
+  const handleOnChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    setQuery(event.currentTarget.value);
+    setPokemons([]);
+    setCursor("000");
   };
 
-  if (error) return <p>Error :(</p>;
+  const handleLoadMore = (event: MouseEvent<HTMLElement>) => {
+    setCursor(endCursor);
+  };
 
-  const list: Edge<Pokemon>[] | undefined =
-    data?.pokemons?.edges?.map((edge: Edge<Pokemon>, index: number) => ({
-      key: index,
-      name: edge.node.name,
-      types: edge.node.types,
-      classification: edge.node.classification,
-    })) || [];
-  console.log(list);
+  const { loading, data } = useQuery(GET_POKEMONS_BY_NAME, {
+    variables: {
+      name: query,
+      cursor,
+    },
+  });
+
+  useEffect(() => {
+    setPokemons(
+      pokemons.concat(
+        data?.pokemons?.edges?.map((edge: Edge<Pokemon>, index: number) => ({
+          key: index,
+          name: edge.node.name,
+          types: edge.node.types,
+          classification: edge.node.classification,
+        })) || []
+      )
+    );
+  }, [data]);
+
+  const hasNextPage = data?.pokemons?.pageInfo?.hasNextPage;
+  const endCursor = data?.pokemons?.pageInfo?.endCursor;
+
   return (
     <>
       <Search
-        placeholder="input search text"
+        placeholder="Search a Pokemon by Name"
         allowClear
-        enterButton="Search"
+        enterButton
         size="large"
-        onSearch={onSearch}
+        onChange={handleOnChange}
       />
-      <Table columns={columns} dataSource={list} loading={loading} />
+      <Table
+        columns={columns}
+        dataSource={pokemons}
+        loading={loading}
+        pagination={false}
+      />
+      {hasNextPage ? (
+        <Button type="primary" loading={loading} onClick={handleLoadMore}>
+          Load more Pokemons
+        </Button>
+      ) : null}
     </>
   );
 };
