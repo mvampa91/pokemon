@@ -1,10 +1,4 @@
-import React, {
-  ChangeEvent,
-  MouseEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Table, Tag, Input, Button } from "antd";
 import { useQuery } from "@apollo/client";
 import "antd/dist/antd.css";
