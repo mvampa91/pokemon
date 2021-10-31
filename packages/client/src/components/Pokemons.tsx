@@ -44,13 +44,14 @@ export const Pokemons: React.FC<{}> = () => {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
 
   const endCursor = useRef();
-  const hasNextPage = useRef();
+  const hasNextPage = useRef<Boolean>();
 
   const handleOnSearch = (event: ChangeEvent<HTMLInputElement>): void => {
     setQuery(event.currentTarget.value);
     setPokemons([]);
     setCursor("000");
     setCurrentFilter("");
+    hasNextPage.current = false;
   };
 
   const handleLoadMore = () => {
@@ -65,6 +66,7 @@ export const Pokemons: React.FC<{}> = () => {
     }
     setPokemons([]);
     setCursor("000");
+    hasNextPage.current = false;
   };
 
   const { loading: pokemonsLoading, data: pokemonsData } = useQuery(
