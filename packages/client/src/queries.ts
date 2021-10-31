@@ -6,9 +6,9 @@ export const GET_POKEMONS_BY_NAME = gql`
       edges {
         cursor
         node {
-          id,
-          name,
-          types,
+          id
+          name
+          types
           classification
         }
       }
@@ -21,16 +21,18 @@ export const GET_POKEMONS_BY_NAME = gql`
 `;
 
 export const GET_POKEMONS_BY_TYPE = gql`
-  query GetPokemonsByType($type: String!) {
-    pokemonsByType(limit: 10, type: $type) {
+  query GetPokemonsByType($type: String!, $cursor: ID, $limit: Int) {
+    pokemonsByType(after: $cursor, limit: $limit, type: $type) {
       edges {
         node {
           id
           name
           types
+          classification
         }
       }
       pageInfo {
+          endCursor
           hasNextPage
       }
     }

@@ -1,4 +1,4 @@
-export const colors: { [key: string]: string } = {
+export const pokemonTypes: { [key: string]: string } = {
 	normal: '#A8A77A',
 	fire: '#EE8130',
 	water: '#6390F0',
@@ -20,5 +20,5 @@ export const colors: { [key: string]: string } = {
 };
 
 export default (type: string): string => {
-    return colors[type.toLocaleLowerCase()] || '#777';
+    return pokemonTypes[type.toLocaleLowerCase()] || '#777';
 };

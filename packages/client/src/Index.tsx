@@ -2,6 +2,7 @@ import React from "react";
 import { render } from "react-dom";
 import { App } from "./components/App";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
+import "./styles/styles.css";
 
 const client = new ApolloClient({
   uri: "http://localhost:4000/",

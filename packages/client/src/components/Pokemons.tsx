@@ -1,13 +1,20 @@
-import React, { ChangeEvent, MouseEvent, useEffect, useState } from "react";
+import React, {
+  ChangeEvent,
+  MouseEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Table, Tag, Input, Button } from "antd";
 import { useQuery } from "@apollo/client";
 import "antd/dist/antd.css";
 
-import { Edge, Pokemon } from "../ducks/types";
-import getTypeColor from "../ducks/colors";
-import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../ducks/queries";
+import getTypeColor, { pokemonTypes } from "../utils/pokemonUtils";
+import { Edge, Pokemon } from "../types";
+import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../queries";
 
 const { Search } = Input;
+const { CheckableTag } = Tag;
 
 const columns = [
   {
@@ -39,40 +46,102 @@ const columns = [
 export const Pokemons: React.FC<{}> = () => {
   const [query, setQuery] = useState<String>();
   const [cursor, setCursor] = useState<String>();
+  const [currentFilter, setCurrentFilter] = useState<String>("");
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
 
-  const handleOnChange = (event: ChangeEvent<HTMLInputElement>): void => {
+  const endCursor = useRef();
+  const hasNextPage = useRef();
+
+  const handleOnSearch = (event: ChangeEvent<HTMLInputElement>): void => {
     setQuery(event.currentTarget.value);
+    setPokemons([]);
+    setCursor("000");
+    setCurrentFilter("");
+  };
+
+  const handleLoadMore = () => {
+    setCursor(endCursor.current);
+  };
+
+  const handleTypeChange = (checked: boolean, filter: string) => {
+    if (checked) {
+      setCurrentFilter(filter);
+    } else {
+      setCurrentFilter("");
+    }
     setPokemons([]);
     setCursor("000");
   };
 
-  const handleLoadMore = (event: MouseEvent<HTMLElement>) => {
-    setCursor(endCursor);
-  };
+  const { loading: pokemonsLoading, data: pokemonsData } = useQuery(
+    GET_POKEMONS_BY_NAME,
+    {
+      variables: {
+        name: query,
+        cursor,
+      },
+    }
+  );
 
-  const { loading, data } = useQuery(GET_POKEMONS_BY_NAME, {
-    variables: {
-      name: query,
-      cursor,
-    },
-  });
+  const { loading: pokemonsByTypeLoading, data: pokemonsByTypeData } = useQuery(
+    GET_POKEMONS_BY_TYPE,
+    {
+      variables: {
+        type: currentFilter,
+        cursor,
+      },
+    }
+  );
 
   useEffect(() => {
-    setPokemons(
-      pokemons.concat(
-        data?.pokemons?.edges?.map((edge: Edge<Pokemon>, index: number) => ({
-          key: index,
-          name: edge.node.name,
-          types: edge.node.types,
-          classification: edge.node.classification,
-        })) || []
-      )
-    );
-  }, [data]);
+    if (!currentFilter) {
+      setPokemons(
+        pokemons.concat(
+          pokemonsData?.pokemons?.edges?.map((edge: Edge<Pokemon>) => ({
+            key: edge.node.id,
+            name: edge.node.name,
+            types: edge.node.types,
+            classification: edge.node.classification,
+          })) || []
+        )
+      );
+      endCursor.current = pokemonsData?.pokemons?.pageInfo?.endCursor;
+      hasNextPage.current = pokemonsData?.pokemons?.pageInfo?.hasNextPage;
+    }
+  }, [pokemonsData, currentFilter]);
 
-  const hasNextPage = data?.pokemons?.pageInfo?.hasNextPage;
-  const endCursor = data?.pokemons?.pageInfo?.endCursor;
+  useEffect(() => {
+    if (currentFilter) {
+      setPokemons(
+        pokemons.concat(
+          pokemonsByTypeData?.pokemonsByType?.edges?.map(
+            (edge: Edge<Pokemon>) => ({
+              key: edge.node.id,
+              name: edge.node.name,
+              types: edge.node.types,
+              classification: edge.node.classification,
+            })
+          ) || []
+        )
+      );
+      endCursor.current =
+        pokemonsByTypeData?.pokemonsByType?.pageInfo?.endCursor;
+      hasNextPage.current =
+        pokemonsByTypeData?.pokemonsByType?.pageInfo?.hasNextPage;
+    }
+  }, [pokemonsByTypeData, currentFilter]);
+
+  const typesFilterRenderer = () => {
+    return Object.keys(pokemonTypes).map((pt) => (
+      <CheckableTag
+        key={pt}
+        checked={currentFilter === pt}
+        onChange={(checked) => handleTypeChange(checked, pt)}
+      >
+        {pt}
+      </CheckableTag>
+    ));
+  };
 
   return (
     <>
@@ -81,16 +150,24 @@ export const Pokemons: React.FC<{}> = () => {
         allowClear
         enterButton
         size="large"
-        onChange={handleOnChange}
+        onChange={handleOnSearch}
       />
+      <div style={{ padding: 8 }}>
+        <span style={{ marginRight: 8 }}>Filter by Type:</span>
+        {typesFilterRenderer()}
+      </div>
       <Table
         columns={columns}
         dataSource={pokemons}
-        loading={loading}
+        loading={pokemonsLoading || pokemonsByTypeLoading}
         pagination={false}
       />
-      {hasNextPage ? (
-        <Button type="primary" loading={loading} onClick={handleLoadMore}>
+      {hasNextPage.current ? (
+        <Button
+          type="primary"
+          loading={pokemonsLoading || pokemonsByTypeLoading}
+          onClick={handleLoadMore}
+        >
           Load more Pokemons
         </Button>
       ) : null}
