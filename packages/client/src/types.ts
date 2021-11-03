@@ -8,3 +8,13 @@ export interface Pokemon {
 export interface Edge<A> {
     node: A;
 }
+
+export interface PokemonState {
+    query: string;
+    pokemons: Pokemon[];
+    cursor: string;
+    filter: string;
+    loading: boolean;
+  };
+
+export type Action = { type: string; payload: any };

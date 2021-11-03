@@ -1,71 +1,38 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Table, Tag, Input, Button } from "antd";
-import { useQuery } from "@apollo/client";
+import React, { ChangeEvent, useEffect, useRef, useReducer } from "react";
+import { Table, Input, Button } from "antd";
 import "antd/dist/antd.css";
 
-import getTypeColor, { pokemonTypes } from "../utils/pokemonUtils";
-import { Edge, Pokemon } from "../types";
+import { pokemonTypes } from "../utils/pokemonUtils";
+import PokemonTypeTag from "./PokemonTypeTag";
+import { columns } from "../utils/columns";
+import { useQuery } from "@apollo/client";
 import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../queries";
+import { reducer, initialState } from "./reducer";
 
 const { Search } = Input;
-const { CheckableTag } = Tag;
 
-const columns = [
-  {
-    title: "Name",
-    dataIndex: "name",
-    key: "name",
-  },
-  {
-    title: "Type",
-    dataIndex: "types",
-    key: "types",
-    render: (text: string[]) => (
-      <>
-        {text.map((t, index) => (
-          <Tag key={index} color={getTypeColor(t)}>
-            {t}
-          </Tag>
-        ))}
-      </>
-    ),
-  },
-  {
-    title: "Classification",
-    dataIndex: "classification",
-    key: "classification",
-  },
-];
+const tableStructure = columns({
+  typesRenderer: (text: string[]) => <PokemonTypeTag types={text} />,
+});
 
 export const Pokemons: React.FC<{}> = () => {
-  const [query, setQuery] = useState<String>();
-  const [cursor, setCursor] = useState<String>();
-  const [currentFilter, setCurrentFilter] = useState<String>("");
-  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  const endCursor = useRef();
+  const endCursor = useRef("");
   const hasNextPage = useRef<Boolean>();
 
   const handleOnSearch = (event: ChangeEvent<HTMLInputElement>): void => {
-    setQuery(event.currentTarget.value);
-    setPokemons([]);
-    setCursor("000");
-    setCurrentFilter("");
+    dispatch({ type: "search", payload: event.currentTarget.value });
+
     hasNextPage.current = false;
   };
 
-  const handleLoadMore = () => {
-    setCursor(endCursor.current);
-  };
-
   const handleTypeChange = (checked: boolean, filter: string) => {
+    let newFilter = "";
     if (checked) {
-      setCurrentFilter(filter);
-    } else {
-      setCurrentFilter("");
+      newFilter = filter;
     }
-    setPokemons([]);
-    setCursor("000");
+    dispatch({ type: "filter", payload: newFilter });
     hasNextPage.current = false;
   };
 
@@ -73,8 +40,8 @@ export const Pokemons: React.FC<{}> = () => {
     GET_POKEMONS_BY_NAME,
     {
       variables: {
-        name: query,
-        cursor,
+        name: state.query,
+        cursor: state.cursor,
       },
     }
   );
@@ -83,61 +50,42 @@ export const Pokemons: React.FC<{}> = () => {
     GET_POKEMONS_BY_TYPE,
     {
       variables: {
-        type: currentFilter,
-        cursor,
+        type: state.filter,
+        cursor: state.cursor,
       },
     }
   );
 
   useEffect(() => {
-    if (!currentFilter) {
-      setPokemons(
-        pokemons.concat(
-          pokemonsData?.pokemons?.edges?.map((edge: Edge<Pokemon>) => ({
-            key: edge.node.id,
-            name: edge.node.name,
-            types: edge.node.types,
-            classification: edge.node.classification,
-          })) || []
-        )
-      );
-      endCursor.current = pokemonsData?.pokemons?.pageInfo?.endCursor;
-      hasNextPage.current = pokemonsData?.pokemons?.pageInfo?.hasNextPage;
-    }
-  }, [pokemonsData, currentFilter]);
+    dispatch({
+      type: "loading",
+      payload: pokemonsLoading || pokemonsByTypeLoading,
+    });
+  }, [pokemonsLoading, pokemonsByTypeLoading]);
 
   useEffect(() => {
-    if (currentFilter) {
-      setPokemons(
-        pokemons.concat(
-          pokemonsByTypeData?.pokemonsByType?.edges?.map(
-            (edge: Edge<Pokemon>) => ({
-              key: edge.node.id,
-              name: edge.node.name,
-              types: edge.node.types,
-              classification: edge.node.classification,
-            })
-          ) || []
-        )
-      );
-      endCursor.current =
-        pokemonsByTypeData?.pokemonsByType?.pageInfo?.endCursor;
-      hasNextPage.current =
-        pokemonsByTypeData?.pokemonsByType?.pageInfo?.hasNextPage;
-    }
-  }, [pokemonsByTypeData, currentFilter]);
+    if (!state.filter) {
+      dispatch({ type: "save", payload: pokemonsData?.pokemons });
 
-  const typesFilterRenderer = () => {
-    return Object.keys(pokemonTypes).map((pt) => (
-      <CheckableTag
-        key={pt}
-        checked={currentFilter === pt}
-        onChange={(checked) => handleTypeChange(checked, pt)}
-      >
-        {pt}
-      </CheckableTag>
-    ));
-  };
+      const { endCursor: next, hasNextPage: more } =
+        pokemonsData?.pokemons?.pageInfo || {};
+
+      endCursor.current = next;
+      hasNextPage.current = more;
+    }
+  }, [pokemonsData, state.filter]);
+
+  useEffect(() => {
+    if (state.filter) {
+      dispatch({ type: "save", payload: pokemonsByTypeData?.pokemonsByType });
+
+      const { endCursor: next, hasNextPage: more } =
+        pokemonsByTypeData?.pokemonsByType?.pageInfo || {};
+
+      endCursor.current = next;
+      hasNextPage.current = more;
+    }
+  }, [pokemonsByTypeData, state.filter]);
 
   return (
     <>
@@ -147,22 +95,30 @@ export const Pokemons: React.FC<{}> = () => {
         enterButton
         size="large"
         onChange={handleOnSearch}
+        value={state.query}
       />
       <div style={{ padding: 8 }}>
         <span style={{ marginRight: 8 }}>Filter by Type:</span>
-        {typesFilterRenderer()}
+        <PokemonTypeTag
+          checkable
+          types={Object.keys(pokemonTypes)}
+          onChange={handleTypeChange}
+          value={state.filter}
+        />
       </div>
       <Table
-        columns={columns}
-        dataSource={pokemons}
-        loading={pokemonsLoading || pokemonsByTypeLoading}
+        columns={tableStructure}
+        dataSource={state.pokemons}
+        loading={state.loading}
         pagination={false}
       />
       {hasNextPage.current ? (
         <Button
           type="primary"
-          loading={pokemonsLoading || pokemonsByTypeLoading}
-          onClick={handleLoadMore}
+          loading={state.loading}
+          onClick={() =>
+            dispatch({ type: "load_more", payload: endCursor.current })
+          }
         >
           Load more Pokemons
         </Button>
