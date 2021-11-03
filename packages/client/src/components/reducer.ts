@@ -3,7 +3,6 @@ import { Edge, Pokemon, PokemonState, Action } from "../types";
 import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../queries";
 
 export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) => {
-    console.log(action)
     switch (action.type) {
       case "loading":
         return {

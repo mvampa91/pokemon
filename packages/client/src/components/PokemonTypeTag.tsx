@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Tag } from "antd";
-import getTypeColor from "../utils/pokemonUtils";
+import { getTypeColor } from "../utils/pokemonUtils";
 const { CheckableTag } = Tag;
 
 const PokemonTypeTag: React.FC<{

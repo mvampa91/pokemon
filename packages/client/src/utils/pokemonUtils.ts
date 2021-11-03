@@ -19,6 +19,6 @@ export const pokemonTypes: { [key: string]: string } = {
 	fairy: '#D685AD',
 };
 
-export default (type: string): string => {
+export const getTypeColor = (type: string): string => {
     return pokemonTypes[type.toLocaleLowerCase()] || '#777';
 };

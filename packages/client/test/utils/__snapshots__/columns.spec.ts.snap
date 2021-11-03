@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should return the desired structure 1`] = `
+Array [
+  Object {
+    "dataIndex": "name",
+    "key": "name",
+    "render": undefined,
+    "title": "Name",
+  },
+  Object {
+    "dataIndex": "types",
+    "key": "types",
+    "render": undefined,
+    "title": "Type",
+  },
+  Object {
+    "dataIndex": "classification",
+    "key": "classification",
+    "render": undefined,
+    "title": "Classification",
+  },
+]
+`;

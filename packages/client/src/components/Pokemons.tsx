@@ -6,7 +6,7 @@ import { pokemonTypes } from "../utils/pokemonUtils";
 import PokemonTypeTag from "./PokemonTypeTag";
 import { columns } from "../utils/columns";
 import { reducer, initialState } from "./reducer";
-import { useFetchPokemons } from "../utils/useFetchPokemon";
+import { useFetchPokemons } from "../utils/useFetchPokemons";
 
 const { Search } = Input;
 
