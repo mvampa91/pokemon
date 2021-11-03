@@ -1,3 +1,5 @@
+import { DocumentNode } from "graphql";
+
 export interface Pokemon {
     id: string;
     name: string;
@@ -15,6 +17,11 @@ export interface PokemonState {
     cursor: string;
     filter: string;
     loading: boolean;
+    endCursor: string;
+    hasNextPage: boolean;
+    call: DocumentNode;
+    key: string;
+    params: {};
   };
 
 export type Action = { type: string; payload: any };

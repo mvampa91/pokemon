@@ -1,13 +1,12 @@
-import React, { ChangeEvent, useEffect, useRef, useReducer } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useReducer } from "react";
 import { Table, Input, Button } from "antd";
 import "antd/dist/antd.css";
 
 import { pokemonTypes } from "../utils/pokemonUtils";
 import PokemonTypeTag from "./PokemonTypeTag";
 import { columns } from "../utils/columns";
-import { useQuery } from "@apollo/client";
-import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../queries";
 import { reducer, initialState } from "./reducer";
+import { useFetchPokemons } from "../utils/useFetchPokemon";
 
 const { Search } = Input;
 
@@ -18,13 +17,8 @@ const tableStructure = columns({
 export const Pokemons: React.FC<{}> = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const endCursor = useRef("");
-  const hasNextPage = useRef<Boolean>();
-
   const handleOnSearch = (event: ChangeEvent<HTMLInputElement>): void => {
     dispatch({ type: "search", payload: event.currentTarget.value });
-
-    hasNextPage.current = false;
   };
 
   const handleTypeChange = (checked: boolean, filter: string) => {
@@ -33,59 +27,35 @@ export const Pokemons: React.FC<{}> = () => {
       newFilter = filter;
     }
     dispatch({ type: "filter", payload: newFilter });
-    hasNextPage.current = false;
   };
 
-  const { loading: pokemonsLoading, data: pokemonsData } = useQuery(
-    GET_POKEMONS_BY_NAME,
-    {
-      variables: {
-        name: state.query,
-        cursor: state.cursor,
-      },
-    }
+  const params = useMemo(
+    () =>
+      Object.entries(state.params).reduce(
+        (acc: { [key: string]: any }, n: any[]) => {
+          acc[n[0]] = state[n[1]];
+          return acc;
+        },
+        {}
+      ),
+    [state.params]
   );
 
-  const { loading: pokemonsByTypeLoading, data: pokemonsByTypeData } = useQuery(
-    GET_POKEMONS_BY_TYPE,
-    {
-      variables: {
-        type: state.filter,
-        cursor: state.cursor,
-      },
-    }
-  );
+  const { loading, data } = useFetchPokemons(state.call, {
+    ...params,
+    key: state.key,
+  });
 
   useEffect(() => {
     dispatch({
       type: "loading",
-      payload: pokemonsLoading || pokemonsByTypeLoading,
+      payload: loading,
     });
-  }, [pokemonsLoading, pokemonsByTypeLoading]);
+  }, [loading]);
 
   useEffect(() => {
-    if (!state.filter) {
-      dispatch({ type: "save", payload: pokemonsData?.pokemons });
-
-      const { endCursor: next, hasNextPage: more } =
-        pokemonsData?.pokemons?.pageInfo || {};
-
-      endCursor.current = next;
-      hasNextPage.current = more;
-    }
-  }, [pokemonsData, state.filter]);
-
-  useEffect(() => {
-    if (state.filter) {
-      dispatch({ type: "save", payload: pokemonsByTypeData?.pokemonsByType });
-
-      const { endCursor: next, hasNextPage: more } =
-        pokemonsByTypeData?.pokemonsByType?.pageInfo || {};
-
-      endCursor.current = next;
-      hasNextPage.current = more;
-    }
-  }, [pokemonsByTypeData, state.filter]);
+    dispatch({ type: "save", payload: data });
+  }, [data]);
 
   return (
     <>
@@ -112,12 +82,12 @@ export const Pokemons: React.FC<{}> = () => {
         loading={state.loading}
         pagination={false}
       />
-      {hasNextPage.current ? (
+      {state.hasNextPage ? (
         <Button
           type="primary"
           loading={state.loading}
           onClick={() =>
-            dispatch({ type: "load_more", payload: endCursor.current })
+            dispatch({ type: "load_more", payload: state.endCursor })
           }
         >
           Load more Pokemons

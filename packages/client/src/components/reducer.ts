@@ -1,8 +1,9 @@
 import { Reducer } from "react";
 import { Edge, Pokemon, PokemonState, Action } from "../types";
+import { GET_POKEMONS_BY_NAME, GET_POKEMONS_BY_TYPE } from "../queries";
 
 export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) => {
-    console.log(action);
+    console.log(action)
     switch (action.type) {
       case "loading":
         return {
@@ -16,6 +17,13 @@ export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) 
           pokemons: [],
           cursor: "000",
           filter: "",
+          hasNextPage: false,
+          call: GET_POKEMONS_BY_NAME,
+          key: "pokemons",
+          params: {
+            name: 'query',
+            cursor: 'cursor'
+          },
         };
       case "filter":
         return {
@@ -23,12 +31,23 @@ export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) 
           filter: action.payload,
           pokemons: [],
           cursor: "000",
-          query: ""
+          query: "",
+          hasNextPage: false,
+          call: action.payload ? GET_POKEMONS_BY_TYPE : initialState.call,
+          key: action.payload ? "pokemonsByType" : initialState.key,
+          params: {
+            type: 'filter',
+            cursor: 'cursor'
+          }
         };
       case "load_more":
         return {
           ...state,
           cursor: action.payload,
+          params: {
+              ...state.params,
+              cursor: 'cursor'
+          },
         };
       case "save":
         return {
@@ -41,6 +60,8 @@ export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) 
               classification: edge.node.classification,
             })) || []
           ),
+          endCursor: action.payload?.pageInfo?.endCursor,
+          hasNextPage: action.payload?.pageInfo?.hasNextPage
         };
   
       default:
@@ -54,4 +75,9 @@ export const reducer: Reducer<any, any> = (state: PokemonState, action: Action) 
     cursor: "",
     filter: "",
     loading: false,
+    endCursor: "",
+    hasNextPage: false,
+    call: GET_POKEMONS_BY_NAME,
+    key: "pokemons",
+    params: {}
   };
